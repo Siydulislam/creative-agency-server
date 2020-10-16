@@ -116,7 +116,7 @@ client.connect(err => {
             })
     })
 
-    app.post('/addAdmin', (req, res) => {
+    app.post('/makeAdmin', (req, res) => {
         const email = req.body.email;
         adminCollection.insertOne({ email })
         .then(result => {
