@@ -40,7 +40,7 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         };
 
-        servicesCollection.insertOne({ title: title, description: description, image: image })
+        servicesCollection.insertOne({ title, description, image })
             .then(result => {
                 res.send(result.insertedCount > 0)
             })
@@ -67,7 +67,7 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         }
 
-        reviewsCollection.insertOne({ name: name, designation: designation, description: description, image: image })
+        reviewsCollection.insertOne({ name, designation, description, image })
             .then(result => {
                 res.send(result.insertedCount > 0)
             })
@@ -96,7 +96,7 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         }
 
-        ordersCollection.insertOne({ name: name, email: email, projectName: projectName, projectDetails: projectDetails, price: price, image: image })
+        ordersCollection.insertOne({  name, email, projectName, projectDetails, price, image })
             .then(result => {
                 res.send(result.insertedCount > 0);
             })
