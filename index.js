@@ -40,7 +40,7 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         };
 
-        servicesCollection.insertOne({ title, description, image })
+        servicesCollection.insertOne({ title: title, description: description, image: image })
             .then(result => {
                 res.send(result.insertedCount > 0)
             })
@@ -67,7 +67,7 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         }
 
-        reviewsCollection.insertOne({ name, designation, description, image })
+        reviewsCollection.insertOne({ name: name, designation: designation, description: description, image: image })
             .then(result => {
                 res.send(result.insertedCount > 0)
             })
@@ -96,7 +96,7 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         }
 
-        ordersCollection.insertOne({ name, email, projectName, projectDetails, price, image })
+        ordersCollection.insertOne({ name: name, email: email, projectName: projectName, projectDetails: projectDetails, price: price, image: image })
             .then(result => {
                 res.send(result.insertedCount > 0);
             })
@@ -110,7 +110,7 @@ client.connect(err => {
     })
 
     app.get('/servicesList', (req, res) => {
-        ordersCollection.find({ email: req.query.email })
+        servicesCollection.find({ email: req.query.email })
             .toArray((err, documents) => {
                 res.send(documents);
             })
