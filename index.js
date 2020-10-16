@@ -110,7 +110,7 @@ client.connect(err => {
     })
 
     app.get('/servicesList', (req, res) => {
-        servicesCollection.find({})
+        ordersCollection.find({ email: req.query.email })
             .toArray((err, documents) => {
                 res.send(documents);
             })
