@@ -1,10 +1,13 @@
 const express = require('express');
-require('dotenv').config();
 const cors = require('cors');
-const fileUpload = require('express-fileupload');
 const bodyParser = require('body-parser');
+const fileUpload = require('express-fileupload');
+require('dotenv').config();
+
 const MongoClient = require('mongodb').MongoClient;
+const ObjectId = require('mongodb').ObjectId;
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hniul.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 const port = 5000;
 
 const app = express();
@@ -18,19 +21,16 @@ app.get('/', (req, res) => {
     res.send("Hello, how are you doing?")
 })
 
-
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 client.connect(err => {
     const servicesCollection = client.db(process.env.DB_NAME).collection("services");
     const reviewsCollection = client.db(process.env.DB_NAME).collection("reviews");
     const ordersCollection = client.db(process.env.DB_NAME).collection("orders");
     const adminCollection = client.db(process.env.DB_NAME).collection("admin");
-    console.log('database connected successfully');
+    console.log('database has been connected successfully');
 
     app.post('/addServices', (req, res) => {
+        const service = req.body;
         const file = req.files.file;
-        const title = req.body.title;
-        const description = req.body.description;
         const newImg = file.data;
         const encImg = newImg.toString('base64');
 
@@ -40,24 +40,26 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         };
 
-        servicesCollection.insertOne({ title, description, image })
+        const services = { ...service, image};
+        servicesCollection.insertOne({ services })
             .then(result => {
-                res.send(result.insertedCount > 0)
-            })
-    })
+                if (result.insertedCount > 0) {
+                    res.status(200).send(result.insertedCount > 0);
+                } else {
+                    res.statusCode(400);
+                }
+            });
+    });
 
-    app.get('/services', (req, res) => {
+    app.get('/getServices', (req, res) => {
         servicesCollection.find({})
-            .toArray((err, documents) => {
-                res.send(documents)
-            })
-    })
+            .toArray((err, services) => {
+                res.status(200).send(services);
+            });
+    });
 
     app.post('/addReviews', (req, res) => {
-        const file = req.files.file;
-        const name = req.body.name;
-        const designation = req.body.designation;
-        const description = req.body.description;
+        const review = req.body;
         const newImg = file.data;
         const encImg = newImg.toString('base64');
 
@@ -65,28 +67,29 @@ client.connect(err => {
             contentType: file.mimetype,
             size: file.size,
             img: Buffer.from(encImg, 'base64')
-        }
+        };
 
-        reviewsCollection.insertOne({ name, designation, description, image })
+        const reviews = { ...review, image};
+        reviewsCollection.insertOne({ reviews })
             .then(result => {
-                res.send(result.insertedCount > 0)
-            })
-    })
+                if (result.insertedCount > 0) {
+                    res.status(200).send(result.insertedCount > 0);
+                } else {
+                    res.statusCode(400);
+                }
+            });
+    });
 
-    app.get('/reviews', (req, res) => {
+    app.get('/getReviews', (req, res) => {
         reviewsCollection.find({})
-            .toArray((err, documents) => {
-                res.send(documents);
-            })
-    })
+            .toArray((err, reviews) => {
+                res.status(200).send(reviews);
+            });
+    });
 
-    app.post('/orders', (req, res) => {
+    app.post('/addOrders', (req, res) => {
+        const order = req.body;
         const file = req.files.file;
-        const name = req.body.name;
-        const email = req.body.email;
-        const projectName = req.body.projectName;
-        const projectDetails = req.body.projectDetails;
-        const price = req.body.price;
         const newImg = file.data;
         const encImg = newImg.toString('base64');
 
@@ -96,35 +99,108 @@ client.connect(err => {
             img: Buffer.from(encImg, 'base64')
         }
 
-        ordersCollection.insertOne({  name, email, projectName, projectDetails, price, image })
+        const orders = { ...order, image };
+        ordersCollection.insertOne({  orders })
             .then(result => {
-                res.send(result.insertedCount > 0);
-            })
-    })
+                if (result.insertedCount > 0) {
+                    res.status(200).send(result.insertedCount > 0);
+                } else {
+                    res.sendStatus(400);
+                }
+            });
+    });
 
-    app.get('/ordersList', (req, res) => {
-        ordersCollection.find({})
-            .toArray((err, documents) => {
-                res.send(documents);
-            })
-    })
+    app.get('/getOrders', (req, res) => {
+        const queryEmail = req.query.email;
+        let filterObject = { email: queryEmail };
+        const projectObject = {};
+        if (!queryEmail) {
+            filterObject = {};
+            projectObject.image = 0;
+        }
 
-    app.get('/servicesList', (req, res) => {
-        servicesCollection.find({})
-            .toArray((err, documents) => {
-                res.send(documents);
-            })
-    })
+        ordersCollection
+            .find(filterObject)
+            .project(projectObject)
+            .toArray((err, orders) => {
+                if (orders.length > 0) {
+                    res.status(200).send(orders);
+                } else {
+                    res.sendStatus(400);
+                }
+            });
+    });
 
-    app.post('/makeAdmin', (req, res) => {
-        const email = req.body.email;
+    // app.get('/servicesList', (req, res) => {
+    //     servicesCollection.find({})
+    //         .toArray((err, documents) => {
+    //             res.send(documents);
+    //         })
+    // })
+
+    app.patch("/updateOrderStatus", (req, res) => {
+        const orderId = req.body.id;
+        const status = req.body.status;
+        ordersCollection
+            .updateOne({ _id: ObjectId(orderId)}, { $set: { status: status }})
+            .then( result => {
+                if (result.modifiedCount) {
+                    res.status(200).send(result.modifiedCount > 0);
+                } else {
+                    res.sendStatus(400);
+                }
+            });
+    });
+
+    app.delete("/cancelOrder", (req, res) => {
+        const id = req.params.id;
+        ordersCollection.deleteOne({ _id: ObjectId(id) })
+            .then(result => {
+                if (result.deletedCount > 0) {
+                    res.status(200).send(result.deletedCount > 0);
+                } else {
+                    res.sendStatus(400);
+                }
+            });
+    });
+
+    app.get("/searchInOrder", (req, res) => {
+        const searchText = req.query.searchText;
+        ordersCollection
+            .find({ email: { $regex: searchText }})
+            .project({ image: 0})
+            .toArray((err, result) => {
+                if(result) {
+                    res.status(200).send(result);
+                } else {
+                    res,sendStatus(404);
+                }
+            });
+    });
+
+    app.post('/addAdmin', (req, res) => {
+        const email = req.body;
         adminCollection.insertOne({ email })
-        .then(result => {
-            res.send(result.insertedCount > 0);
-        })
-    })
+            .then(result => {
+                if (result.insertedCount > 0) {
+                    res.status(200).send(result.insertedCount > 0);
+                } else {
+                    res.sendStatus(400);
+                }
+            });
+    });
+
+    app.get("/getAdmin", (req, res) => {
+        adminCollection.find({})
+            .toArray((err, admin) => {
+                if (admin.length > 0 ) {
+                    res.status(200).send(admin);
+                } else {
+                    res.sendStatus(400);
+                }
+            });
+    });
 
 });
-
 
 app.listen(process.env.PORT || port)
